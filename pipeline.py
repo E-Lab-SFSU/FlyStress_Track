@@ -193,7 +193,7 @@ class PlanktonPipeline:
                 self.draw_object(frame, det, head, tail)
 
         if self.show:
-            cv2.imshow("Plankton Tracking", frame)
+            cv2.imshow("Fly Tracking", frame)
 
     # --------------------------------------------------
     # Drawing
