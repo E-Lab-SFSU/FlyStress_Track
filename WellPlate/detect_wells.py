@@ -2,11 +2,14 @@
 detect_wells.pt
 
 Detect the wells center (x,y) + diameter manually using OpenCv and HOUGH
-Author: Cherese Jordan
+
 """
 from __future__ import annotations
 
 from typing import Optional
+
+import csv
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -155,6 +158,15 @@ def create_plate_from_video_frame(
         max_radius=max_radius,
     )
 
+    save_calibration_csv(
+        top_left=geometry["top_left"],
+        top_right=geometry["top_right"],
+        bottom_left=geometry["bottom_left"],
+        bottom_right=geometry["bottom_right"],
+        well_diameter_px=geometry["well_diameter_px"],
+    )
+
+
     return WellPlate(
         rows=actual_rows,
         columns=actual_columns,
@@ -166,6 +178,82 @@ def create_plate_from_video_frame(
         well_margin_px=actual_margin,
     )
 
+def save_calibration_csv(
+        top_left: tuple[float, float],
+        top_right: tuple[float, float],
+        bottom_left: tuple[float, float],
+        bottom_right: tuple[float, float],
+        well_diameter_px: float,
+        csv_path: str = "well_calibration.csv",
+) -> None:
+    # Saves well dimensions to a CSV file.
+    # The file stores the four corner-well centers and the average well diameter in pixels.
+
+    output_path = Path(csv_path)
+
+    with output_path.open(
+            mode="w",
+            newline="",
+            encoding="utf-8",
+    ) as csv_file:
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=[
+                "name",
+                "x",
+                "y",
+                "diameter_px",
+            ],
+        )
+
+        writer.writeheader()
+
+        writer.writerow(
+            {
+                "name": "WELL_TL",
+                "x": top_left[0],
+                "y": top_left[1],
+                "diameter_px": "",
+            }
+        )
+
+        writer.writerow(
+            {
+                "name": "WELL_TR",
+                "x": top_right[0],
+                "y": top_right[1],
+                "diameter_px": "",
+            }
+        )
+
+        writer.writerow(
+            {
+                "name": "WELL_BL",
+                "x": bottom_left[0],
+                "y": bottom_left[1],
+                "diameter_px": "",
+            }
+        )
+
+        writer.writerow(
+            {
+                "name": "WELL_BR",
+                "x": bottom_right[0],
+                "y": bottom_right[1],
+                "diameter_px": "",
+            }
+        )
+
+        writer.writerow(
+            {
+                "name": "WELL_DIAMETER",
+                "x": "",
+                "y": "",
+                "diameter_px": well_diameter_px,
+            }
+        )
+
+    print(f"Saved well calibration to: {output_path.resolve()}")
 
 def test_plate_on_video(
         video_path: str,
