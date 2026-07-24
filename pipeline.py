@@ -34,7 +34,7 @@ from WellPlate.well_plate import create_plate_from_config
 from WellPlate.well_overlay import add_well_overlay
 
 
-class PlanktonPipeline:
+class FlyPipeline:
     def __init__(self, video_path, show=True):
         self.video_path = video_path
         self.show = show
@@ -117,7 +117,7 @@ class PlanktonPipeline:
 
         for det in detections:
             oid = det["id"]
-            cx, cy = det["centroid"]
+            cx, cy = det["centroid"]        # center position of well
 
             track = self.tracker.objects[oid]
             history = track["history"]
