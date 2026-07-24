@@ -12,8 +12,8 @@ import cv2
 import numpy as np
 
 import config
-from well_overlay import add_well_overlay
-from well_plate import WellPlate, create_plate_from_config
+from WellPlate.well_overlay import add_well_overlay
+from WellPlate.well_plate import WellPlate, create_plate_from_config
 
 
 def detect_well_grid(

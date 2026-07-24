@@ -17,12 +17,11 @@ coords = coordinates
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from math import hypot
 from typing import Optional
 
 import config
-from well import Well
+from WellPlate.well import Well
 
 # full well plate
 
