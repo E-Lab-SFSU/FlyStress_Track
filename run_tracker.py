@@ -23,7 +23,7 @@ RUN_SINGLE_FILE = True   # True = single file, False = batch directory
 
 
 # --- Single-video mode (debugging) ---
-VIDEO_PATH = r"C:/Users/FOO/B.mov"               # <======= REPLACE WITH VIDEO FILE LOCATION FOR SINGLE VIDEO RUN
+VIDEO_PATH = r"C:\Users\chana\Videos\Screen Recordings\Fly_Test_Vid.mp4"               # <======= REPLACE WITH VIDEO FILE LOCATION FOR SINGLE VIDEO RUN
 
 # --- Batch mode (production) ---
 VIDEO_DIR = r"C:/Users/FOO/Videos/Test//"        # <======= REPLACE WITH VIDEO FILE DIRECTORY FOR BATCH RUN

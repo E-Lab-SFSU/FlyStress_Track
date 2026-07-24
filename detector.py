@@ -1,13 +1,13 @@
 # Copyright (c) 2025 Thomas Zimmerman — MIT License
 """
-detector.py
+fly_Detector_v1.py
 
 Foreground detection module for plankton tracking.
 
 This module performs perception only:
 - Background subtraction
 - Thresholding
-- Morphology cleanup
+DELETE- Morphology cleanup
 - Contour extraction
 
 It does NOT:
@@ -99,15 +99,8 @@ def detect_plankton(frame, cap=None):
     # --------------------------------------------------------
     # Foreground (saturating subtraction)
     # --------------------------------------------------------
-    Fg = cv2.subtract(V, _BG_MEDIAN_V)
+    Fg = cv2.subtract(_BG_MEDIAN_V, V)
 
-    # --------------------------------------------------------
-    # Optional Gaussian blur
-    # --------------------------------------------------------
-    if hasattr(config, "GAUSSIAN_BLUR") and config.GAUSSIAN_BLUR:
-        kx, ky = config.GAUSSIAN_BLUR
-        if kx > 1 and ky > 1:
-            Fg = cv2.GaussianBlur(Fg, (kx, ky), 0)
 
     # --------------------------------------------------------
     # Thresholding
@@ -125,33 +118,9 @@ def detect_plankton(frame, cap=None):
             cv2.THRESH_BINARY
         )
 
-    # --------------------------------------------------------
-    # Apply circular ROI mask (if enabled)
-    # --------------------------------------------------------
-    mask = apply_circular_mask(mask)
-
-    # --------------------------------------------------------
-    # Foreground energy gate (reject noise-only frames)
-    # --------------------------------------------------------
-    if hasattr(config, "MAX_FOREGROUND_PIXELS"):
-        if np.count_nonzero(mask) > config.MAX_FOREGROUND_PIXELS:
-            return [], mask, "NO_OBJECT"
-
-    # --------------------------------------------------------
-    # Morphology cleanup
-    # --------------------------------------------------------
-    mask = cv2.morphologyEx(
-        mask,
-        cv2.MORPH_CLOSE,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (31, 31))
-    )
-
-    mask = cv2.morphologyEx(
-        mask,
-        cv2.MORPH_OPEN,
-        cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (7, 7))
-    )
-
+    cv2.imshow('Background Image', _BG_MEDIAN_V)
+    cv2.imshow('Detect Image', Fg)
+    cv2.imshow('Binary Image', mask)
     # --------------------------------------------------------
     # Contour extraction
     # --------------------------------------------------------
