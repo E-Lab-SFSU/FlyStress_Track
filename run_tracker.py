@@ -14,7 +14,7 @@ located in the same directory as the video file.
 # Copyright (c) 2025 Thomas Zimmerman — MIT License
 
 import os
-from pipeline import PlanktonPipeline
+from pipeline import FlyPipeline
 
 # -------------------------------------------------
 # USER CONFIG
@@ -37,7 +37,7 @@ SHOW = True        # show visualization windows or not
 def run_single_video(video_path):
     print(f"Processing single video:\n  {video_path}")
 
-    pipeline = PlanktonPipeline(video_path, show=SHOW)
+    pipeline = FlyPipeline(video_path, show=SHOW)
     pipeline.run()
 
 
@@ -59,7 +59,7 @@ def run_video_directory(video_dir):
         print(f"\n[{i}/{len(video_files)}] Processing: {fname}")
 
         try:
-            pipeline = PlanktonPipeline(full_path, show=SHOW)
+            pipeline = FlyPipeline(full_path, show=SHOW)
             pipeline.run()
         except KeyboardInterrupt:
             print("Batch interrupted by user")
