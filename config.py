@@ -45,6 +45,18 @@ BALL_ASPECT_EPS = 0.25
 NUM_CAP_LINES = 4
 MIN_DISPLACEMENT_PX = 2.0   # net displacement gate for windowed velocity
 
+# Well dimensons
+WELL_ROWS = 6
+WELL_COLM = 6
+FULL_WELL = WELL_ROWS * WELL_COLM
+
+# Expected (E) flies & behavior
+E_FLY_PER_WELL = 1      #expected fly per well
+E_TOTAL_FLIES = FULL_WELL * E_FLY_PER_WELL      # total number of expected flies
+
+SLEEP_SEC = 300.0       # 5 minutes | time used to determine when fly is sleep
+SLEEP_AMT = 50          # % | when x amount of flies sleep...
+INACTIVE_RNG = 3        # pixels | range a fly can move and still be considered inactive
 # Notes:
 # - Velocity ramps smoothly over VELOCITY_WINDOW_FRAMES
 # - Movement states: SWIM_FORWARD, SWIM_BACKWARD, ATTACHED
