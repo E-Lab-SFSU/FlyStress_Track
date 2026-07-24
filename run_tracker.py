@@ -1,91 +1,116 @@
 # -*- coding: utf-8 -*-
+# Copyright (c) 2025 Thomas Zimmerman — MIT License
 """
 run_tracker.py
 
-Entry point for running the plankton tracking pipeline in:
-1) single-video mode, or
-2) batch directory mode
-
-CSV output:
-For each video, a CSV is written into a subdirectory called "csv"
-located in the same directory as the video file.
+Entry point for running FlyPipeline on one video or every supported
+video in a directory.
 """
 
-# Copyright (c) 2025 Thomas Zimmerman — MIT License
+from __future__ import annotations
 
 import os
+import sys
+from pathlib import Path
+
 from pipeline import FlyPipeline
 
-# -------------------------------------------------
-# USER CONFIG
-# -------------------------------------------------
-RUN_SINGLE_FILE = True   # True = single file, False = batch directory
+
+# ---------------------------------------------------------------------
+# USER SETTINGS
+# ---------------------------------------------------------------------
+
+RUN_SINGLE_FILE = True
+
+VIDEO_PATH = Path(
+    r"C:\Users\chana\Videos\Screen Recordings\Fly_Test_Vid.mp4"
+)
+
+VIDEO_DIR = Path(r"C:\Users\chana\Videos")
+
+VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".m4v"}
+SHOW_WINDOWS = True
 
 
-# --- Single-video mode (debugging) ---
-VIDEO_PATH = r"C:\Users\chana\Videos\Screen Recordings\Fly_Test_Vid.mp4"               # <======= REPLACE WITH VIDEO FILE LOCATION FOR SINGLE VIDEO RUN
+# ---------------------------------------------------------------------
+# Run helpers
+# ---------------------------------------------------------------------
 
-# --- Batch mode (production) ---
-VIDEO_DIR = r"C:/Users/FOO/Videos/Test//"        # <======= REPLACE WITH VIDEO FILE DIRECTORY FOR BATCH RUN
+def run_single_video(video_path: Path) -> bool:
+    """Run one video. Return True on success."""
 
-VIDEO_EXTS = (".mp4", ".avi", ".mov", ".mkv")
-SHOW = True        # show visualization windows or not
+    video_path = video_path.expanduser().resolve()
+    if not video_path.is_file():
+        print(f"Video file not found: {video_path}")
+        return False
 
-# -------------------------------------------------
+    print(f"\nProcessing video:\n  {video_path}")
+
+    try:
+        FlyPipeline(str(video_path), show=SHOW_WINDOWS).run()
+    except KeyboardInterrupt:
+        print("\nProcessing interrupted by user.")
+        return False
+    except Exception as error:
+        print(f"\nFailed to process {video_path.name}: {error}")
+        return False
+
+    return True
 
 
-def run_single_video(video_path):
-    print(f"Processing single video:\n  {video_path}")
+def find_videos(video_dir: Path) -> list[Path]:
+    """Return supported video files directly inside a directory."""
 
-    pipeline = FlyPipeline(video_path, show=SHOW)
-    pipeline.run()
+    video_dir = video_dir.expanduser().resolve()
+    if not video_dir.is_dir():
+        raise NotADirectoryError(video_dir)
+
+    return sorted(
+        path
+        for path in video_dir.iterdir()
+        if path.is_file() and path.suffix.lower() in VIDEO_EXTENSIONS
+    )
 
 
-def run_video_directory(video_dir):
-    video_files = [
-        f for f in sorted(os.listdir(video_dir))
-        if f.lower().endswith(VIDEO_EXTS)
-    ]
+def run_video_directory(video_dir: Path) -> None:
+    """Run all supported videos in a directory."""
 
+    video_files = find_videos(video_dir)
     if not video_files:
-        print("No video files found in directory.")
+        print(f"No supported videos found in: {video_dir.resolve()}")
         return
 
-    print(f"Found {len(video_files)} videos in directory")
+    print(f"Found {len(video_files)} video(s) in {video_dir.resolve()}")
 
-    for i, fname in enumerate(video_files, 1):
-        full_path = os.path.join(video_dir, fname)
+    succeeded = 0
+    failed = 0
 
-        print(f"\n[{i}/{len(video_files)}] Processing: {fname}")
+    for index, video_path in enumerate(video_files, start=1):
+        print(f"\n[{index}/{len(video_files)}] {video_path.name}")
+        if run_single_video(video_path):
+            succeeded += 1
+        else:
+            failed += 1
 
-        try:
-            pipeline = FlyPipeline(full_path, show=SHOW)
-            pipeline.run()
-        except KeyboardInterrupt:
-            print("Batch interrupted by user")
-            break
+    print("\nBatch complete.")
+    print(f"Succeeded: {succeeded}")
+    print(f"Failed: {failed}")
 
 
-def main():
+def main() -> int:
+    """Validate settings and start the requested run mode."""
+
     if RUN_SINGLE_FILE:
-        if not VIDEO_PATH:
-            raise ValueError("RUN_SINGLE_FILE=True but VIDEO_PATH is empty")
-        if not os.path.isfile(VIDEO_PATH):
-            raise FileNotFoundError(VIDEO_PATH)
+        return 0 if run_single_video(VIDEO_PATH) else 1
 
-        run_single_video(VIDEO_PATH)
-
-    else:
-        if not VIDEO_DIR:
-            raise ValueError("RUN_SINGLE_FILE=False but VIDEO_DIR is empty")
-        if not os.path.isdir(VIDEO_DIR):
-            raise NotADirectoryError(VIDEO_DIR)
-
+    try:
         run_video_directory(VIDEO_DIR)
+    except NotADirectoryError:
+        print(f"Video directory not found: {VIDEO_DIR.expanduser().resolve()}")
+        return 1
 
+    return 0
 
 
 if __name__ == "__main__":
-    main()
-
-
+    sys.exit(main())

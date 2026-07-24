@@ -58,7 +58,7 @@ E_TOTAL_FLIES = FULL_WELL * E_FLY_PER_WELL      # total number of expected flies
 
 SLEEP_SEC = 300.0       # 5 minutes | time used to determine when fly is sleep
 SLEEP_AMT = 50          # % | when x amount of flies sleep...
-INACTIVE_RNG = 3        # pixels | range a fly can move and still be considered inactive
+INACTIVE_RNG = 0.5        # pixels | range a fly can move and still be considered inactive
 
 # well display
 SHOW_OVERLAY = True
