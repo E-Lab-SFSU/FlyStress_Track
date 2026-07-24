@@ -14,8 +14,8 @@ from typing import Iterable, Optional
 
 import config
 
-from fly_activity import AWAKE, INACTIVE, UNKNOWN
-from fly_sleep import SLEEP, FlySleepResult
+from Flies.fly_activity import AWAKE, INACTIVE, UNKNOWN
+from Flies.fly_sleep import SLEEP, FlySleepResult
 
 
 @dataclass(frozen=True)

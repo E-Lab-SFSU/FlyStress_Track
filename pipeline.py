@@ -24,6 +24,15 @@ from kinematics import head_tail_from_bbox
 from features_motion import windowed_velocity, binary_motion_detect
 from movement_state import MovementStateTracker
 
+from Flies.fly_position import FlyPositionLogger
+from Flies.fly_activity import FlyActivityTracker
+from Flies.fly_sleep import FlySleepTracker
+from Flies.mass_state import MassStateTracker
+from Flies.occupancy import OccupancyValidator
+
+from WellPlate.well_plate import create_plate_from_config
+from WellPlate.well_overlay import add_well_overlay
+
 
 class PlanktonPipeline:
     def __init__(self, video_path, show=True):

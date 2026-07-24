@@ -12,7 +12,7 @@ from typing import Iterable, Optional
 
 import config
 
-from fly_activity import (
+from Flies.fly_activity import (
     AWAKE,
     INACTIVE,
     UNKNOWN,

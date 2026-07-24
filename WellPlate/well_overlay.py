@@ -12,7 +12,7 @@ import cv2
 import numpy as np
 
 import config
-from well_plate import WellPlate
+from WellPlate.well_plate import WellPlate
 
 
 def draw_wells(
