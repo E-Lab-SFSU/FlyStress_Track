@@ -45,7 +45,9 @@ BALL_ASPECT_EPS = 0.25
 NUM_CAP_LINES = 4
 MIN_DISPLACEMENT_PX = 2.0   # net displacement gate for windowed velocity
 
-# Well dimensons
+# -------------------------
+# Well Plates
+# -------------------------
 WELL_ROWS = 6
 WELL_COLS = 6
 FULL_WELL = WELL_ROWS * WELL_COLS
@@ -60,6 +62,7 @@ INACTIVE_RNG = 3        # pixels | range a fly can move and still be considered 
 
 SHOW_OVERLAY = True
 SHOW_LABELS = True
+SHOW_ASSIGNMENT_BOUNDARY = False
                             # Well
 WELL_TL = (494.0, 324.0)    # A1 | top left
 WELL_TR = (688.0, 309.0)    # A6 | top right
@@ -68,6 +71,13 @@ WELL_BR = (703.0, 495.0)    # F6 | bottom right
 
 WELL_DIAMETER = 30.0    # pixels
 WELL_MARGIN = 2.0       # pixels | used to exclude well wells
+
+# Output settings
+SAVE_POSITION_CSV = True
+SAVE_MASS_STATE_CSV = True
+SAVE_WELL_GEOMETRY_CSV = True
+CSV_FLUSH_INTERVAL_FRAMES = 30
+
 # Notes:
 # - Velocity ramps smoothly over VELOCITY_WINDOW_FRAMES
 # - Movement states: SWIM_FORWARD, SWIM_BACKWARD, ATTACHED

@@ -43,46 +43,225 @@ class FlyPipeline:
         if not self.cap.isOpened():
             raise IOError(f"Cannot open video: {video_path}")
 
+        video_fps = self.cap.get(cv2.CAP_PROP_FPS)
+
+        if video_fps > 0:
+            self.fps = float(video_fps)
+        else:
+            self.fps = float(config.FPS)
+
         self.tracker = CentroidTracker()
         self.state_tracker = MovementStateTracker()
+
+        self.plate = create_plate_from_config()
+
+        self.occupancy_validator = OccupancyValidator.from_plate(
+            plate=self.plate,
+            expected_per_well=config.E_FLY_PER_WELL,
+        )
+
+        self.fly_activity_tracker = FlyActivityTracker(
+        inactive_range_px=config.INACTIVE_RNG,
+        )
+
+        self.fly_sleep_tracker = FlySleepTracker(
+        sleep_threshold_s=config.SLEEP_SEC,
+        )
+
+        self.mass_state_tracker = MassStateTracker(
+        expected_total_flies=config.E_TOTAL_FLIES,
+        required_sleep_percent=config.SLEEP_AMT,
+        )
 
         self.frame_idx = 0
         self.last_velocity_angle = {}
 
-        self._init_csv(video_path)
+        self._init_output_files(video_path)
 
     # --------------------------------------------------
     # CSV initialization
     # --------------------------------------------------
-    def _init_csv(self, video_path):
+    def _init_output_files(self, video_path):
+        """
+        Create all CSV outputs for this run using one shared timestamp.
+        """
+
         video_dir = os.path.dirname(video_path)
-        video_base = os.path.splitext(os.path.basename(video_path))[0]
-        timestamp = datetime.now().strftime("%Y_%m_%d_%H_%M_%S")
+        video_base = os.path.splitext(
+            os.path.basename(video_path)
+        )[0]
 
-        csv_dir = os.path.join(video_dir, "csv")
-        os.makedirs(csv_dir, exist_ok=True)
+        self.run_timestamp = datetime.now().strftime(
+            "%Y_%m_%d_%H_%M_%S"
+        )
 
-        csv_name = f"{video_base}_{timestamp}.csv"
-        self.csv_path = os.path.join(csv_dir, csv_name)
+        self.csv_dir = os.path.join(video_dir, "csv")
+        os.makedirs(self.csv_dir, exist_ok=True)
 
-        self.csv_file = open(self.csv_path, "w", newline="")
-        self.csv_writer = csv.writer(self.csv_file)
+        run_prefix = (
+            f"{video_base}_{self.run_timestamp}"
+        )
 
-        self.csv_writer.writerow([
-            "frame_idx",
-            "time_s",
-            "object_id",
-            "centroid_x",
-            "centroid_y",
-            "pose",
-            "speed_avg_px_s",
-            "velocity_angle_deg",
-            "movement_state",
-            "area_px",
-            "perimeter_px",
-            "aspect_ratio",
-            "solidity",
-        ])
+        # --------------------------------------------------------
+        # Full per-fly analysis CSV
+        # --------------------------------------------------------
+
+        self.tracking_csv_path = os.path.join(
+            self.csv_dir,
+            f"{run_prefix}_tracking.csv",
+        )
+
+        self.tracking_csv_file = open(
+            self.tracking_csv_path,
+            "w",
+            newline="",
+            encoding="utf-8",
+        )
+
+        self.tracking_csv_writer = csv.DictWriter(
+            self.tracking_csv_file,
+            fieldnames=[
+                "frame_idx",
+                "time_s",
+                "object_id",
+                "fly_label",
+                "well_label",
+                "well_number",
+                "centroid_x",
+                "centroid_y",
+                "displacement_px",
+                "activity_state",
+                "inactive_duration_s",
+                "fly_state",
+                "pose",
+                "speed_avg_px_s",
+                "velocity_angle_deg",
+                "movement_state",
+            ],
+        )
+
+        self.tracking_csv_writer.writeheader()
+
+        # --------------------------------------------------------
+        # Simple position-only CSV
+        # --------------------------------------------------------
+
+        self.position_logger = None
+
+        if config.SAVE_POSITION_CSV:
+            position_path = os.path.join(
+                self.csv_dir,
+                f"{run_prefix}_positions.csv",
+            )
+
+            self.position_logger = FlyPositionLogger(
+                csv_path=position_path,
+                fps=self.fps,
+            )
+
+        # --------------------------------------------------------
+        # One population summary per frame
+        # --------------------------------------------------------
+
+        self.mass_csv_file = None
+        self.mass_csv_writer = None
+
+        if config.SAVE_MASS_STATE_CSV:
+            mass_path = os.path.join(
+                self.csv_dir,
+                f"{run_prefix}_mass_state.csv",
+            )
+
+            self.mass_csv_file = open(
+                mass_path,
+                "w",
+                newline="",
+                encoding="utf-8",
+            )
+
+            self.mass_csv_writer = csv.DictWriter(
+                self.mass_csv_file,
+                fieldnames=[
+                    "frame_idx",
+                    "time_s",
+                    "expected_total",
+                    "observed_total",
+                    "awake_count",
+                    "inactive_count",
+                    "sleep_count",
+                    "unknown_count",
+                    "sleep_percent",
+                    "required_sleep_percent",
+                    "threshold_met",
+                    "threshold_message",
+                ],
+            )
+
+            self.mass_csv_writer.writeheader()
+
+        # --------------------------------------------------------
+        # Save the well geometry once for this run
+        # --------------------------------------------------------
+
+        if config.SAVE_WELL_GEOMETRY_CSV:
+            well_path = os.path.join(
+                self.csv_dir,
+                f"{run_prefix}_wells.csv",
+            )
+
+            self._save_well_geometry_csv(well_path)
+
+    # -----------------------
+    # Well Dimensions
+    # -----------------------
+    def _save_well_geometry_csv(self, csv_path):
+        """
+        Save every calculated well center and radius once per run.
+        """
+
+        with open(
+                csv_path,
+                "w",
+                newline="",
+                encoding="utf-8",
+        ) as csv_file:
+            writer = csv.DictWriter(
+                csv_file,
+                fieldnames=[
+                    "well_number",
+                    "well_label",
+                    "row",
+                    "column",
+                    "center_x",
+                    "center_y",
+                    "diameter_px",
+                    "radius_px",
+                    "assignment_radius_px",
+                ],
+            )
+
+            writer.writeheader()
+
+            for well in self.plate.wells:
+                writer.writerow(
+                    {
+                        "well_number": well.number,
+                        "well_label": well.label,
+                        "row": well.row,
+                        "column": well.column,
+                        "center_x": f"{well.center_x:.3f}",
+                        "center_y": f"{well.center_y:.3f}",
+                        "diameter_px": (
+                            f"{well.diameter_px:.3f}"
+                        ),
+                        "radius_px": (
+                            f"{well.radius_px:.3f}"
+                        ),
+                        "assignment_radius_px": (
+                            f"{self.plate.assignment_radius_px:.3f}"
+                        ),
+                    }
+                )
 
     # --------------------------------------------------
     # Main loop
