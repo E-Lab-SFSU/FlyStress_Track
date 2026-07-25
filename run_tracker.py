@@ -23,10 +23,10 @@ from pipeline import FlyPipeline
 RUN_SINGLE_FILE = True
 
 VIDEO_PATH = Path(
-    r"C:\Users\chana\Videos\Screen Recordings\Fly_Test_Vid.mp4"
+    r"C:\Users\chana\Videos\Screen Recordings\Fly_Test_Vid.mp4"  ----->   # paste path to single video for analysis
 )
 
-VIDEO_DIR = Path(r"C:\Users\chana\Videos")
+VIDEO_DIR = Path(r"C:\Users\chana\Videos")                   ------->     # past path to directory (folder) containing 2 or more videos
 
 VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv", ".m4v"}
 SHOW_WINDOWS = True
