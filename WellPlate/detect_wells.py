@@ -178,6 +178,68 @@ def create_plate_from_video_frame(
         well_margin_px=actual_margin,
     )
 
+def detect_plate_wells_adjusted(
+        reference_frame: np.ndarray,
+        shift_x: float = 0.0,
+        shift_y: float = 0.0,
+        base_plate: Optional[WellPlate] = None,
+        rows: Optional[int] = None,
+        columns: Optional[int] = None,
+        well_margin_px: Optional[float] = None,
+        min_radius: int = 10,
+        max_radius: int = 25,
+) -> WellPlate:
+    """
+    Return well positions adjusted for a small plate/camera movement.
+
+    Two modes:
+
+    1. base_plate is given (typical per-frame use):
+       Skip Hough detection entirely and just translate the known
+       well grid by (shift_x, shift_y). This is the cheap path meant
+       to be called once per new image, after phase-correlation
+       against the reference image has produced (shift_x, shift_y).
+
+    2. base_plate is None (first frame / calibration):
+       Run Hough-circle well detection on reference_frame to build
+       the initial WellPlate, then translate it by (shift_x, shift_y)
+       (normally 0, 0 for the very first frame).
+
+    Parameters
+    ----------
+    reference_frame : np.ndarray
+        Only used in calibration mode (base_plate=None).
+    shift_x, shift_y : float
+        The plate's estimated movement for this frame, in pixels,
+        e.g. as returned by cv2.phaseCorrelate (see align_and_diff.py).
+    base_plate : WellPlate, optional
+        Previously detected/created plate to translate instead of
+        re-detecting.
+
+    Returns
+    -------
+    WellPlate
+        Well grid positioned for this frame.
+    """
+
+    if base_plate is not None:
+        return base_plate.shifted(shift_x, shift_y)
+
+    plate = create_plate_from_video_frame(
+        frame=reference_frame,
+        rows=rows,
+        columns=columns,
+        well_margin_px=well_margin_px,
+        min_radius=min_radius,
+        max_radius=max_radius,
+    )
+
+    if shift_x or shift_y:
+        plate = plate.shifted(shift_x, shift_y)
+
+    return plate
+
+
 def save_calibration_csv(
         top_left: tuple[float, float],
         top_right: tuple[float, float],

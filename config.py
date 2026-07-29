@@ -64,7 +64,7 @@ INACTIVE_RNG = 0.5        # pixels | range a fly can move and still be considere
 SHOW_OVERLAY = True
 SHOW_LABELS = True
 SHOW_ASSIGNMENT_BOUNDARY = False
-                            # Well
+# Well
 WELL_TL = (285.0, 320.0)     # center of top-left physical well
 WELL_TR = (1390.0, 290.0)    # center of top-right physical well
 WELL_BL = (180.0, 850.0)     # center of bottom-left physical well
@@ -72,6 +72,25 @@ WELL_BR = (1375.0, 850.0)    # center of bottom-right physical well
 
 WELL_DIAMETER = 150.0       # pixels
 WELL_MARGIN = 2.0       # pixels | used to exclude well wells
+
+# -------------------------
+# Image-sequence pipeline (one image per second, see image_pipeline.py)
+# -------------------------
+IMAGE_DIR = r"C:\path\to\image_sequence"   # directory of imageNNNNNN.png
+IMAGE_DIFF_THRESH = 20        # pixel intensity diff threshold for motion mask
+MIN_ALIGN_RESPONSE = 0.3      # phaseCorrelate confidence floor per frame
+JITTER_THRESHOLD_PX = 2.0     # deadband: displacement below this counts as zero movement
+AWAKE_THRESHOLD_PX = 40.0     # rolling-window distance sum above this => AWAKE
+ROLLING_WINDOW_SEC = 300.0    # 5 minutes, used by Flies.rolling_sleep only
+
+# SLEEP_MODEL selects which sleep classifier ImagePipeline uses:
+#   "continuous"     -> Flies.fly_sleep.FlySleepTracker (existing model:
+#                        continuous inactivity timer, resets on any
+#                        above-threshold displacement)
+#   "rolling_window"  -> Flies.rolling_sleep.RollingDistanceSleepTracker
+#                        (matches the guide pseudocode exactly: jitter
+#                        deadband + rolling 5-minute distance sum)
+SLEEP_MODEL = "continuous"
 
 # Output settings
 SAVE_POSITION_CSV = True
