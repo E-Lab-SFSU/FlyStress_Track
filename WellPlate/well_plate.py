@@ -32,26 +32,26 @@ class WellPlate:
                  bottom_left: tuple[float, float], bottom_right: tuple[float, float],
                  well_diameter_px: float, well_margin_px: float = 0.0,) -> None:
 
-                # initializing values and placements
-                self._validate_inputs(
-                    rows=rows,
-                    columns=columns,
-                    well_diameter_px=well_diameter_px,
-                    well_margin_px=well_margin_px,
-                )
+        # initializing values and placements
+        self._validate_inputs(
+            rows=rows,
+            columns=columns,
+            well_diameter_px=well_diameter_px,
+            well_margin_px=well_margin_px,
+        )
 
-                self.rows = int(rows)
-                self.columns = int(columns)
+        self.rows = int(rows)
+        self.columns = int(columns)
 
-                self.top_left = self._float_point(top_left)
-                self.top_right = self._float_point(top_right)
-                self.bottom_left = self._float_point(bottom_left)
-                self.bottom_right = self._float_point(bottom_right)
+        self.top_left = self._float_point(top_left)
+        self.top_right = self._float_point(top_right)
+        self.bottom_left = self._float_point(bottom_left)
+        self.bottom_right = self._float_point(bottom_right)
 
-                self.well_diameter_px = float(well_diameter_px)
-                self.well_margin_px = float(well_margin_px)
+        self.well_diameter_px = float(well_diameter_px)
+        self.well_margin_px = float(well_margin_px)
 
-                self.wells = self._build_wells()
+        self.wells = self._build_wells()
 
     # locate and build the wellplate without using preset coords from config
     # uses preset configs as fallbacks
@@ -189,6 +189,31 @@ class WellPlate:
                 well_number += 1
 
         return wells
+
+    def shifted(self, shift_x: float, shift_y: float) -> "WellPlate":
+        """
+        Return a new WellPlate whose four corner points are translated
+        by (shift_x, shift_y). Every well center moves by the same
+        amount since well centers are interpolated from the corners.
+
+        Used to cheaply re-locate wells for a new frame once a global
+        image shift (e.g. from phase correlation) is known, instead of
+        re-running Hough-circle detection on every frame.
+        """
+
+        def _shift(point: tuple[float, float]) -> tuple[float, float]:
+            return point[0] + shift_x, point[1] + shift_y
+
+        return WellPlate(
+            rows=self.rows,
+            columns=self.columns,
+            top_left=_shift(self.top_left),
+            top_right=_shift(self.top_right),
+            bottom_left=_shift(self.bottom_left),
+            bottom_right=_shift(self.bottom_right),
+            well_diameter_px=self.well_diameter_px,
+            well_margin_px=self.well_margin_px,
+        )
 
     @property
     def total_wells(self) -> int:

@@ -73,40 +73,10 @@ WELL_BR = (1375.0, 850.0)    # center of bottom-right physical well
 WELL_DIAMETER = 150.0       # pixels
 WELL_MARGIN = 2.0       # pixels | used to exclude well wells
 
-# ------------------------------------------------------------
-# Automatic well detection
-# ------------------------------------------------------------
-
-WELL_ROWS = 4
-WELL_COLS = 8
-FULL_WELL = WELL_ROWS * WELL_COLS
-
-# Actual well-circle range in the reference image.
-WELL_MIN_RADIUS = 45
-WELL_MAX_RADIUS = 90
-
-# Minimum spacing between well-circle candidates.
-WELL_MIN_DISTANCE = 105
-
-# Lower values detect more circles.
-WELL_HOUGH_PARAM2 = 25.0
-
-# Mounting-bolt detection.
-BOLT_MIN_RADIUS = 70
-BOLT_MAX_RADIUS = 145
-BOLT_PADDING = 5
-
-# Normalize all physical wells to one common radius.
-NORMALIZE_WELL_RADII = True
-WELL_RADIUS_TOLERANCE = 2
-
-# Save calibration outputs.
-SAVE_WELL_GEOMETRY_CSV = True
-SAVE_WELL_DEBUG_IMAGE = True
-
 # Output settings
 SAVE_POSITION_CSV = True
 SAVE_MASS_STATE_CSV = True
+SAVE_WELL_GEOMETRY_CSV = True
 CSV_FLUSH_INTERVAL_FRAMES = 30
 
 # Notes:
