@@ -53,7 +53,7 @@ WELL_COLS = 6
 FULL_WELL = WELL_ROWS * WELL_COLS
 
 # Expected (E) flies & activity
-E_FLY_PER_WELL = 1      #expected fly per well
+E_FLY_PER_WELL = 2      #expected fly per well
 E_TOTAL_FLIES = FULL_WELL * E_FLY_PER_WELL      # total number of expected flies
 
 SLEEP_SEC = 300.0       # 5 minutes | time used to determine when fly is sleep
