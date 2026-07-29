@@ -32,7 +32,7 @@ from pipeline import FlyPipeline
 RUN_SINGLE_FILE = True
 
 # Single-video mode
-VIDEO_PATH = r"C:\Users\chana\Videos\flies.mp4"
+VIDEO_PATH = r"C:\Users\chana\Videos\New_Vid_Yay.mp4"
 
 # Batch mode
 VIDEO_DIR = r"C:\Users\chana\Videos\Screen Recordings"

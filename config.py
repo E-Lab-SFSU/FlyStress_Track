@@ -6,7 +6,7 @@ All tuning parameters should be modified here rather than in code.
 """
 
 # Video / timing
-FPS = 30
+FPS = 1
 PLAYBACK_DELAY = 1   # milliseconds; 1 = real-time-ish, 0 = pause
 HREZ = 640  # Display resolution
 VREZ = 512
@@ -22,7 +22,7 @@ MASK_RADIUS = 128
 
 # Detection / thresholding
 THRESH_METHOD = "fixed"   # "fixed" or "otsu"
-THRESH = 10
+THRESH = 25
 MIN_A = 10
 MAX_A = 824
 MIN_WH = 2
@@ -48,8 +48,8 @@ MIN_DISPLACEMENT_PX = 2.0   # net displacement gate for windowed velocity
 # -------------------------
 # Well Plates
 # -------------------------
-WELL_ROWS = 6
-WELL_COLS = 6
+WELL_ROWS = 4
+WELL_COLS = 8
 FULL_WELL = WELL_ROWS * WELL_COLS
 
 # Expected (E) flies & activity
@@ -65,12 +65,12 @@ SHOW_OVERLAY = True
 SHOW_LABELS = True
 SHOW_ASSIGNMENT_BOUNDARY = False
                             # Well
-WELL_TL = (494.0, 324.0)    # A1 | top left
-WELL_TR = (688.0, 309.0)    # A6 | top right
-WELL_BL = (513.0, 513.0)    # F1 | bottom left
-WELL_BR = (703.0, 495.0)    # F6 | bottom right
+WELL_TL = (285.0, 320.0)     # center of top-left physical well
+WELL_TR = (1390.0, 290.0)    # center of top-right physical well
+WELL_BL = (180.0, 850.0)     # center of bottom-left physical well
+WELL_BR = (1375.0, 850.0)    # center of bottom-right physical well
 
-WELL_DIAMETER = 30.0    # pixels
+WELL_DIAMETER = 150.0       # pixels
 WELL_MARGIN = 2.0       # pixels | used to exclude well wells
 
 # Output settings
