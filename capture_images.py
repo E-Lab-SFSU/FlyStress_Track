@@ -26,10 +26,27 @@ def create_experiment_folder(root: Path) -> Path:
 
 def open_camera() -> cv2.VideoCapture:
     system = platform.system()
+
     if system == "Windows":
-        return cv2.VideoCapture(config.CAMERA_INDEX, cv2.CAP_DSHOW)
+        return cv2.VideoCapture(
+            config.CAMERA_INDEX,
+            cv2.CAP_DSHOW,
+        )
+
     if system == "Linux":
-        return cv2.VideoCapture(config.CAMERA_INDEX, cv2.CAP_V4L2)
+        camera_device = Path("/dev/video0")
+
+        if not camera_device.exists():
+            raise RuntimeError(
+                f"Camera device does not exist: {camera_device}\n"
+                "Run: v4l2-ctl --list-devices"
+            )
+
+        return cv2.VideoCapture(
+            str(camera_device),
+            cv2.CAP_V4L2,
+        )
+
     return cv2.VideoCapture(config.CAMERA_INDEX)
 
 
