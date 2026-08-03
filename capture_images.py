@@ -137,6 +137,16 @@ def main() -> None:
             read_frame(cap)
 
         reference_frame = read_frame(cap)
+
+        print("Reference frame shape:", reference_frame.shape)
+
+        cv2.imwrite(
+            "reference_frame_debug.png",
+            reference_frame
+        )
+
+        print("Saved reference_frame_debug.png")
+
         bolts, wells = detect_plate_wells(
             reference_frame,
             rows=config.PLATE_ROWS,
