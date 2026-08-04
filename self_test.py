@@ -1,23 +1,14 @@
-"""Quick no-camera validation for FlyStress Track v1.0."""
 from sleep_analysis.fly_detection import FlyDetection
-from sleep_analysis.single_fly_tracker import SingleFlyTracker
+from sleep_analysis.multi_fly_tracker import PerWellMultiFlyTracker
 
-
-def main() -> None:
-    tracker = SingleFlyTracker(["A1"], jitter_threshold_px=3.0,
-                               rolling_window_seconds=300.0, sleep_duration_seconds=300.0,
-                               max_position_jump_px=45.0, max_valid_sample_gap_seconds=2.5)
-    detection = [FlyDetection("A1", 10.0, 10.0, 0.0, 0.0, 50, 20)]
-    result = None
-    for second in range(301):
-        result = tracker.update("A1", detection, float(second), True)
-    assert result is not None and result.state == "ASLEEP"
-    assert result.immobile_duration_seconds == 300.0
-    missing = tracker.update("A1", [], 302.0, True)
-    assert missing.state == "UNKNOWN"
-    assert missing.immobile_duration_seconds == 300.0
-    print("FlyStress v1.0 self-test passed.")
-
-
-if __name__ == "__main__":
-    main()
+def d(x,y,a=40,n=1): return FlyDetection('A1',x,y,x,y,a,30,n)
+t=PerWellMultiFlyTracker(['A1'],flies_per_well=3)
+r=t.update_all({'A1':[d(10,10),d(30,10),d(50,10)]},0.0)
+assert [x.observation_status for x in r]==['DETECTED','DETECTED','DETECTED']
+r=t.update_all({'A1':[d(11,10),d(31,10),d(51,10)]},1.0)
+assert [x.observation_status for x in r]==['','','']
+r=t.update_all({'A1':[d(12,10),d(41,10,85,2)]},2.0)
+assert sum(x.observation_status=='OVERLAP' for x in r)==2
+r=t.update_all({'A1':[d(13,10)]},3.0)
+assert sum(x.observation_status=='UNKNOWN' for x in r)==2
+print('FlyStress three-fly self-test passed.')
