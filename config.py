@@ -133,3 +133,34 @@ TRACK_MAX_MISSED_FRAMES = 5
 JITTER_THRESHOLD_PX = 3.0
 ROLLING_WINDOW_SECONDS = 300
 AWAKE_THRESHOLD_PX = 20.0
+
+
+# --------------------------------------------------
+# Analysis input settings
+# --------------------------------------------------
+
+# True:
+#     Analyze one specific experiment folder.
+#
+# False:
+#     Analyze every experiment folder inside EXPERIMENT_DIR.
+RUN_SINGLE_EXPERIMENT = True
+
+
+# Paste the path to one experiment folder here.
+EXPERIMENT_PATH = Path(
+    r"C:\Users\chana\Downloads\FS_IMG\exp00001"
+)
+
+
+# Paste the path to the folder containing multiple experiments.
+EXPERIMENT_DIR = Path(
+    r"C:\Users\chana\Downloads\FS_IMG"
+)
+
+
+# Experiment folders must start with "exp".
+EXPERIMENT_PREFIX = "exp"
+
+
+SHOW_WINDOWS = True

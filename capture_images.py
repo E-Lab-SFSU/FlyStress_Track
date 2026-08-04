@@ -5,6 +5,7 @@ import platform
 import time
 from datetime import datetime
 from pathlib import Path
+from live_views import LiveViewManager
 
 import cv2
 
@@ -109,14 +110,17 @@ def write_capture_metadata(path: Path, rows: list[dict[str, object]]) -> None:
 
 def main() -> None:
     experiment_folder = create_experiment_folder(config.OUTPUT_ROOT)
+
     images_folder = experiment_folder / "images"
     plate_folder = experiment_folder / "plate"
+
     images_folder.mkdir()
     plate_folder.mkdir()
 
     print(f"Experiment folder: {experiment_folder.resolve()}")
 
     cap = open_camera()
+
     if not cap.isOpened():
         raise RuntimeError(
             f"Could not open camera index {config.CAMERA_INDEX}. "
@@ -124,117 +128,449 @@ def main() -> None:
         )
 
     try:
+        # --------------------------------------------------
+        # Configure and warm up the camera
+        # --------------------------------------------------
+
         configure_camera(cap)
+
+        actual_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        actual_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        actual_fps = cap.get(cv2.CAP_PROP_FPS)
+
         print(
             "Actual camera mode: "
-            f"{int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))} x "
-            f"{int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))} at "
-            f"{cap.get(cv2.CAP_PROP_FPS):.1f} FPS"
+            f"{actual_width} x {actual_height} at "
+            f"{actual_fps:.1f} FPS"
         )
 
-        warmup_end = time.monotonic() + config.CAMERA_WARMUP_SECONDS
+        warmup_end = (
+                time.monotonic()
+                + config.CAMERA_WARMUP_SECONDS
+        )
+
         while time.monotonic() < warmup_end:
             read_frame(cap)
 
+        # --------------------------------------------------
+        # Capture the first/background frame
+        # --------------------------------------------------
+
         reference_frame = read_frame(cap)
 
-        print("Reference frame shape:", reference_frame.shape)
-
-        cv2.imwrite(
-            "reference_frame_debug.png",
-            reference_frame
-        )
-
-        print("Saved reference_frame_debug.png")
-
-        bolts, wells = detect_plate_wells(
-            reference_frame,
-            rows=config.PLATE_ROWS,
-            columns=config.PLATE_COLUMNS,
-        )
-
-        if len(wells) != config.EXPECTED_WELLS:
-            raise RuntimeError(
-                f"Detected {len(wells)} wells; expected {config.EXPECTED_WELLS}."
-            )
-
-        left, top, right, bottom = crop_bounds_from_wells(
-            wells,
+        print(
+            "Reference frame shape:",
             reference_frame.shape,
         )
-        cropped_reference = reference_frame[top:bottom, left:right]
-        cropped_wells = adjust_wells_to_crop(wells, left, top)
 
-        annotated_full = annotate(reference_frame, bolts, wells)
-        annotated_crop = annotate(cropped_reference, [], cropped_wells)
+        debug_path = (
+                plate_folder
+                / "reference_frame_debug.png"
+        )
 
-        cv2.imwrite(str(plate_folder / "plate_reference_full.png"), reference_frame)
-        cv2.imwrite(str(plate_folder / "plate_wells_detected_full.png"), annotated_full)
-        cv2.imwrite(str(plate_folder / "plate_wells_detected_cropped.png"), annotated_crop)
-        save_csv(plate_folder / "plate_wells.csv", cropped_wells)
+        if not cv2.imwrite(
+                str(debug_path),
+                reference_frame,
+        ):
+            raise RuntimeError(
+                f"Could not save debug image: {debug_path}"
+            )
 
-        with (plate_folder / "crop_bounds.csv").open(
-                "w", newline="", encoding="utf-8"
-        ) as file:
-            writer = csv.writer(file)
-            writer.writerow(["left", "top", "right", "bottom"])
-            writer.writerow([left, top, right, bottom])
+        print(
+            "Saved reference frame:",
+            debug_path.resolve(),
+        )
 
-        print(f"Detected {len(cropped_wells)} wells.")
-        print(f"Plate crop: left={left}, top={top}, right={right}, bottom={bottom}")
-        print("Saving one cropped image per second. Press q to stop.")
+        # --------------------------------------------------
+        # Attempt to detect wells
+        #
+        # Detection failure is no longer fatal.
+        # --------------------------------------------------
 
-        metadata_rows: list[dict[str, object]] = []
+        bolts = []
+        wells = []
+        cropped_wells = []
+
+        well_detection_error = None
+
+        try:
+            bolts, wells = detect_plate_wells(
+                reference_frame,
+                rows=config.PLATE_ROWS,
+                columns=config.PLATE_COLUMNS,
+            )
+
+            if len(wells) != config.EXPECTED_WELLS:
+                raise RuntimeError(
+                    f"Detected {len(wells)} wells; "
+                    f"expected {config.EXPECTED_WELLS}."
+                )
+
+            print(
+                f"Successfully detected "
+                f"{len(wells)} wells."
+            )
+
+        except Exception as error:
+            well_detection_error = str(error)
+
+            print()
+            print("WARNING: Well detection failed.")
+            print(well_detection_error)
+            print(
+                "Capture and diagnostic windows "
+                "will continue using the full frame."
+            )
+            print()
+
+            error_path = (
+                    plate_folder
+                    / "well_detection_error.txt"
+            )
+
+            error_path.write_text(
+                well_detection_error,
+                encoding="utf-8",
+            )
+
+        # --------------------------------------------------
+        # Set the processing area
+        #
+        # If wells were detected:
+        #     crop to the plate.
+        #
+        # If wells were not detected:
+        #     use the full camera frame.
+        # --------------------------------------------------
+
+        if wells:
+            left, top, right, bottom = (
+                crop_bounds_from_wells(
+                    wells,
+                    reference_frame.shape,
+                )
+            )
+
+            processing_reference = (
+                reference_frame[
+                    top:bottom,
+                    left:right,
+                ]
+            )
+
+            cropped_wells = adjust_wells_to_crop(
+                wells,
+                left,
+                top,
+            )
+
+            annotated_full = annotate(
+                reference_frame,
+                bolts,
+                wells,
+            )
+
+            annotated_crop = annotate(
+                processing_reference,
+                [],
+                cropped_wells,
+            )
+
+            cv2.imwrite(
+                str(
+                    plate_folder
+                    / "plate_reference_full.png"
+                ),
+                reference_frame,
+            )
+
+            cv2.imwrite(
+                str(
+                    plate_folder
+                    / "plate_wells_detected_full.png"
+                ),
+                annotated_full,
+            )
+
+            cv2.imwrite(
+                str(
+                    plate_folder
+                    / "plate_wells_detected_cropped.png"
+                ),
+                annotated_crop,
+            )
+
+            save_csv(
+                plate_folder / "plate_wells.csv",
+                cropped_wells,
+                )
+
+            with (
+                    plate_folder / "crop_bounds.csv"
+            ).open(
+                "w",
+                newline="",
+                encoding="utf-8",
+            ) as file:
+                writer = csv.writer(file)
+
+                writer.writerow(
+                    [
+                        "left",
+                        "top",
+                        "right",
+                        "bottom",
+                    ]
+                )
+
+                writer.writerow(
+                    [
+                        left,
+                        top,
+                        right,
+                        bottom,
+                    ]
+                )
+
+            print(
+                f"Plate crop: "
+                f"left={left}, "
+                f"top={top}, "
+                f"right={right}, "
+                f"bottom={bottom}"
+            )
+
+        else:
+            image_height, image_width = (
+                reference_frame.shape[:2]
+            )
+
+            left = 0
+            top = 0
+            right = image_width
+            bottom = image_height
+
+            processing_reference = (
+                reference_frame.copy()
+            )
+
+            cv2.imwrite(
+                str(
+                    plate_folder
+                    / "plate_reference_full.png"
+                ),
+                reference_frame,
+            )
+
+            with (
+                    plate_folder / "crop_bounds.csv"
+            ).open(
+                "w",
+                newline="",
+                encoding="utf-8",
+            ) as file:
+                writer = csv.writer(file)
+
+                writer.writerow(
+                    [
+                        "left",
+                        "top",
+                        "right",
+                        "bottom",
+                    ]
+                )
+
+                writer.writerow(
+                    [
+                        left,
+                        top,
+                        right,
+                        bottom,
+                    ]
+                )
+
+            print(
+                "Using the full camera frame "
+                "because wells were not detected."
+            )
+
+        # --------------------------------------------------
+        # Create the live diagnostic windows
+        #
+        # The background image is the first frame.
+        # --------------------------------------------------
+
+        live_views = LiveViewManager(
+            processing_reference,
+            display_width=640,
+            binary_threshold=25,
+            minimum_motion_area=20,
+        )
+
+        print()
+        print(
+            "Displaying:"
+        )
+        print("  Background Image")
+        print("  Grayscale Image")
+        print("  Binary Image")
+        print("  Detect Image")
+        print("  Tracking Window")
+        print()
+        print(
+            "Saving one image per second."
+        )
+        print(
+            "Press q in an OpenCV window to stop."
+        )
+
+        # --------------------------------------------------
+        # Prepare image capture
+        # --------------------------------------------------
+
+        metadata_rows: list[
+            dict[str, object]
+        ] = []
+
         image_number = 1
+
         start_time = time.monotonic()
         next_capture_time = start_time
 
+        # --------------------------------------------------
+        # Main capture loop
+        # --------------------------------------------------
+
         while True:
             frame = read_frame(cap)
-            cropped = frame[top:bottom, left:right]
 
-            cv2.imshow(config.PREVIEW_WINDOW_NAME, cropped)
+            processing_frame = frame[
+                top:bottom,
+                left:right,
+            ]
+
+            display_wells = (
+                cropped_wells
+                if cropped_wells
+                else None
+            )
+
+            quit_requested = live_views.show(
+                processing_frame,
+                wells=display_wells,
+                tracks=None,
+                well_detection_error=(
+                    well_detection_error
+                ),
+            )
+
             now = time.monotonic()
 
-            if now >= next_capture_time:
-                filename = f"image{image_number:06d}{config.IMAGE_EXTENSION}"
-                image_path = images_folder / filename
+            # ----------------------------------------------
+            # Save one image per interval
+            # ----------------------------------------------
 
-                if not cv2.imwrite(str(image_path), cropped):
-                    raise RuntimeError(f"Could not save image: {image_path}")
+            if now >= next_capture_time:
+                filename = (
+                    f"image{image_number:06d}"
+                    f"{config.IMAGE_EXTENSION}"
+                )
+
+                image_path = (
+                        images_folder / filename
+                )
+
+                saved = cv2.imwrite(
+                    str(image_path),
+                    processing_frame,
+                )
+
+                if not saved:
+                    raise RuntimeError(
+                        "Could not save image: "
+                        f"{image_path}"
+                    )
 
                 elapsed = now - start_time
+
                 metadata_rows.append(
                     {
                         "image": filename,
-                        "image_number": image_number,
-                        "timestamp_iso": datetime.now().astimezone().isoformat(timespec="milliseconds"),
-                        "elapsed_seconds": f"{elapsed:.3f}",
-                        "width_px": cropped.shape[1],
-                        "height_px": cropped.shape[0],
+                        "image_number": (
+                            image_number
+                        ),
+                        "timestamp_iso": (
+                            datetime.now()
+                            .astimezone()
+                            .isoformat(
+                                timespec="milliseconds"
+                            )
+                        ),
+                        "elapsed_seconds": (
+                            f"{elapsed:.3f}"
+                        ),
+                        "width_px": (
+                            processing_frame.shape[1]
+                        ),
+                        "height_px": (
+                            processing_frame.shape[0]
+                        ),
                     }
                 )
+
                 write_capture_metadata(
-                    experiment_folder / "capture_metadata.csv",
+                    experiment_folder
+                    / "capture_metadata.csv",
                     metadata_rows,
                     )
 
-                print(f"Saved {filename}")
+                print(
+                    f"Saved {filename}"
+                )
+
                 image_number += 1
-                next_capture_time += config.CAPTURE_INTERVAL_SECONDS
 
+                next_capture_time += (
+                    config
+                    .CAPTURE_INTERVAL_SECONDS
+                )
+
+                # Prevent the program from rapidly saving
+                # multiple images if it falls behind.
                 if next_capture_time < now:
-                    next_capture_time = now + config.CAPTURE_INTERVAL_SECONDS
+                    next_capture_time = (
+                            now
+                            + config
+                            .CAPTURE_INTERVAL_SECONDS
+                    )
 
-            if cv2.waitKey(1) & 0xFF == ord("q"):
+            # ----------------------------------------------
+            # Stop when q is pressed
+            # ----------------------------------------------
+
+            if quit_requested:
+                print(
+                    "Stop requested."
+                )
                 break
+
+    except KeyboardInterrupt:
+        print()
+        print(
+            "Capture stopped with Ctrl+C."
+        )
 
     finally:
         cap.release()
         cv2.destroyAllWindows()
 
-    print("Capture stopped.")
-
+        print(
+            "Camera released."
+        )
+        print(
+            f"Experiment saved in: "
+            f"{experiment_folder.resolve()}"
+        )
 
 if __name__ == "__main__":
     main()
