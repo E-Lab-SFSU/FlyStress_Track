@@ -1,45 +1,28 @@
-"""Rolling five-minute movement accumulation and sleep classification."""
-
+"""Time-based rolling movement and continuous-immobility state."""
 from __future__ import annotations
-
 from collections import deque
-from dataclasses import dataclass, field
 
 
-@dataclass
-class RollingSleepState:
-    """Maintain one fly's rolling movement history."""
+class RollingMovement:
+    def __init__(self, window_seconds: float) -> None:
+        self.window_seconds = float(window_seconds)
+        self._values: deque[tuple[float, float]] = deque()
+        self.total = 0.0
 
-    window_samples: int
-    awake_threshold_px: float
-    distances: deque[float] = field(init=False)
-    rolling_distance_px: float = 0.0
+    def advance(self, timestamp_s: float) -> float:
+        cutoff = timestamp_s - self.window_seconds
+        while self._values and self._values[0][0] < cutoff:
+            _, value = self._values.popleft()
+            self.total -= value
+        return max(0.0, self.total)
 
-    def __post_init__(self) -> None:
-        if self.window_samples < 1:
-            raise ValueError("window_samples must be at least 1.")
-        self.distances = deque()
+    def add(self, timestamp_s: float, distance_px: float) -> float:
+        self.advance(timestamp_s)
+        value = max(0.0, float(distance_px))
+        self._values.append((float(timestamp_s), value))
+        self.total += value
+        return self.total
 
-    def reset(self) -> None:
-        """Clear all accumulated movement for a newly assigned identity slot."""
-        self.distances.clear()
-        self.rolling_distance_px = 0.0
-
-    def update(self, distance_px: float) -> tuple[float, str, int]:
-        """Add one sample, remove the expired sample, and return state."""
-        if len(self.distances) == self.window_samples:
-            self.rolling_distance_px -= self.distances.popleft()
-
-        self.distances.append(float(distance_px))
-        self.rolling_distance_px += float(distance_px)
-
-        # Clamp tiny floating-point residue to zero.
-        if abs(self.rolling_distance_px) < 1e-12:
-            self.rolling_distance_px = 0.0
-
-        state = (
-            "AWAKE"
-            if self.rolling_distance_px > self.awake_threshold_px
-            else "ASLEEP"
-        )
-        return self.rolling_distance_px, state, len(self.distances)
+    @property
+    def samples(self) -> int:
+        return len(self._values)

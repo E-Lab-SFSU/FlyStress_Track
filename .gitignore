@@ -2,4 +2,5 @@
 .idea/
 __pycache__/
 *.pyc
+FlyStress_Experiments/
 FS_IMG/

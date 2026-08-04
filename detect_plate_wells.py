@@ -21,6 +21,7 @@ from pathlib import Path
 
 import cv2
 import numpy as np
+import config
 
 
 @dataclass(frozen=True)
@@ -115,17 +116,38 @@ def make_bolt_exclusion_mask(
 
 
 def detect_well_candidates(gray: np.ndarray, exclusion_mask: np.ndarray) -> list[Circle]:
-    """Detect smaller well circles after masking the mounting bolts."""
-    # Keep the original grayscale image for circle detection. The corner wells
-    # sit close to the bolts, so masking the full bolt area can erase a real well.
-    # Bolt rejection is performed afterward using candidate-center position.
-    return _hough_circles(
-        gray,
-        min_radius=45,
-        max_radius=80,
-        min_distance=105,
-        param2=25,
-    )
+    """Detect wells using image-size-scaled parameters.
+
+    Several Hough sensitivity levels are attempted so the same code can tolerate
+    changes in camera resolution, distance, and zoom. The first result containing
+    at least 32 candidates is preferred; otherwise the largest candidate set is
+    returned for the caller's diagnostic error message.
+    """
+    height, width = gray.shape
+    scale = min(width, height)
+
+    # For the current plate geometry, a well radius is usually about 4-10% of
+    # the shorter image dimension. These limits intentionally overlap to allow
+    # moderate changes in zoom and camera placement.
+    min_radius = max(12, int(scale * 0.035))
+    max_radius = max(min_radius + 8, int(scale * 0.11))
+    min_distance = max(30, int(scale * 0.075))
+
+    best: list[Circle] = []
+    for param2 in (30, 26, 22, 19, 16):
+        candidates = _hough_circles(
+            gray,
+            min_radius=min_radius,
+            max_radius=max_radius,
+            min_distance=min_distance,
+            param2=param2,
+        )
+        if len(candidates) > len(best):
+            best = candidates
+        if len(candidates) >= 32:
+            return candidates
+
+    return best
 
 
 def _circle_is_excluded(circle: Circle, bolts: list[Circle], padding: int = 25) -> bool:
