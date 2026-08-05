@@ -54,7 +54,10 @@ class PerWellMultiFlyTracker:
         self.was_overlapping = {w:False for w in well_names}
 
     def area_hints(self):
-        return {w: float(median(v)) for w,v in self.area_samples.items() if v}
+        return {w: float(median(v)) for w, v in self.area_samples.items() if v}
+
+    def area_sample_counts(self):
+        return {w: len(v) for w, v in self.area_samples.items()}
 
     def _roll(self, track, timestamp, distance):
         cutoff = timestamp - self.window
