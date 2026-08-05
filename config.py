@@ -2,15 +2,15 @@
 from pathlib import Path
 
 CAMERA_DEVICE = "/dev/video0"
-CAMERA_INDEX = 1
-CAMERA_WIDTH = 1600
-CAMERA_HEIGHT = 1200
+CAMERA_INDEX = 0
+CAMERA_WIDTH = 1280
+CAMERA_HEIGHT = 720
 CAMERA_FPS = 30
 CAMERA_FOURCC = "MJPG"
 CAMERA_WARMUP_SECONDS = 2.0
 CAPTURE_INTERVAL_SECONDS = 1.0
 
-OUTPUT_ROOT = Path.home() / "FlyStress_Experiments"
+OUTPUT_ROOT = Path("/media/admin/MR_RIGGS/FS_IMG")
 EXPERIMENT_PREFIX = "exp"
 IMAGE_EXTENSION = ".png"
 SAVE_CAPTURED_IMAGES = True
@@ -29,7 +29,7 @@ MANUAL_CALIBRATION_WINDOW_NAME = "Manual Well Calibration"
 MANUAL_CALIBRATION_PREVIEW_FILENAME = "plate_wells_manual_preview.png"
 
 SHOW_WINDOWS = True
-DISPLAY_WIDTH = 900
+DISPLAY_WIDTH = 640
 
 # Background model. Empty-reference images are optional. If absent, a temporal
 # median is built from the experiment images, which is usually preferable to a
