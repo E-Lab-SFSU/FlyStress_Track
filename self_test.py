@@ -7,7 +7,7 @@ def main() -> None:
     tracker = SingleFlyTracker(["A1"], jitter_threshold_px=3.0,
                                rolling_window_seconds=300.0, sleep_duration_seconds=300.0,
                                max_position_jump_px=45.0, max_valid_sample_gap_seconds=2.5)
-    detection = [FlyDetection("A1", 10.0, 10.0, 0.0, 0.0, 50, 20)]
+    detection = [FlyDetection("A1", 10.0, 10.0, 0.0, 0.0, 50, 20, 8, 8, 12, 12)]
     result = None
     for second in range(301):
         result = tracker.update("A1", detection, float(second), True)

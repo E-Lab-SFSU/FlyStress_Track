@@ -40,7 +40,8 @@ class LiveViewManager:
         cv2.putText(image, text, (12, y), cv2.FONT_HERSHEY_SIMPLEX, 0.65,
                     (255, 255, 255), 2, cv2.LINE_AA)
 
-    def process(self, frame: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _legacy_process(self, frame: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Old whole-plate motion view, retained only as a fallback."""
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (5, 5), 0)
         difference = cv2.absdiff(self.background_gray, blurred)
@@ -56,14 +57,52 @@ class LiveViewManager:
                 continue
             x, y, w, h = cv2.boundingRect(contour)
             cv2.rectangle(detect, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.circle(detect, (x + w // 2, y + h // 2), 4, (0, 0, 255), -1)
             count += 1
-        self._text(detect, f"Motion regions: {count}")
+        self._text(detect, f"Whole-plate motion regions: {count}")
+        return gray, binary, detect
+
+    def process(self, frame: np.ndarray, detection_mask: np.ndarray | None = None,
+                wells: list[dict[str, object]] | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Build the diagnostic windows.
+
+        When a detector mask is supplied, Detect Image shows the *actual per-well
+        candidate mask* used by the fly detector. It no longer displays unrelated
+        whole-plate motion regions, which previously made the tracker look as if it
+        were considering hundreds of global objects.
+        """
+        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        if detection_mask is None or detection_mask.shape != gray.shape:
+            return self._legacy_process(frame)
+
+        binary = detection_mask.copy()
+        detect = frame.copy()
+        total_regions = 0
+
+        if wells:
+            for well in wells:
+                cx = int(float(well["x"]))
+                cy = int(float(well["y"]))
+                radius = int(float(well["radius"]))
+                cv2.circle(detect, (cx, cy), radius, (130, 130, 130), 1)
+                cv2.putText(detect, str(well["well"]), (cx - 12, cy - radius - 3),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.35, (255, 255, 255), 1, cv2.LINE_AA)
+
+        contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        for contour in contours:
+            if cv2.contourArea(contour) < 1:
+                continue
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(detect, (x, y), (x + w, y + h), (0, 255, 0), 1)
+            total_regions += 1
+
+        self._text(detect, f"Per-well fly candidate regions: {total_regions}")
+        self._text(detect, "Only candidates inside each fly's own well are considered", 1)
         return gray, binary, detect
 
     def show(self, frame: np.ndarray, tracking_image: np.ndarray | None,
-             status: str) -> bool:
-        gray, binary, detect = self.process(frame)
+             status: str, detection_mask: np.ndarray | None = None,
+             wells: list[dict[str, object]] | None = None) -> bool:
+        gray, binary, detect = self.process(frame, detection_mask=detection_mask, wells=wells)
         background = self.background_bgr.copy()
         self._text(background, "First captured frame")
         tracking = frame.copy() if tracking_image is None else tracking_image.copy()
