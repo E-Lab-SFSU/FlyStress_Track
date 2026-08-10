@@ -45,7 +45,7 @@ def create_video(images, output, duration, width, height):
     )
 
     command = [
-        "ffmpeg",
+        "C:/Users/chana/AppData/Local/Microsoft/WinGet/Packages/Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe/ffmpeg-9.0-full_build/bin/ffmpeg.exe",
         "-y",
         "-f", "concat",
         "-safe", "0",
@@ -67,7 +67,7 @@ def main():
 
     parser.add_argument("folder")
     parser.add_argument("output")
-    parser.add_argument("--duration", type=float, default=2)
+    parser.add_argument("--duration", type=float, default=1)        # change video speed. < 1 is faster, > 1 is slower
     parser.add_argument("--width", type=int, default=1920)
     parser.add_argument("--height", type=int, default=1080)
 
